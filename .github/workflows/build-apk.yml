@@ -1,0 +1,49 @@
+name: Build debug APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The Release step creates a GitHub release, which needs write access to
+# repository contents. Without this the default token is read-only here and
+# the release step fails with 403 "Resource not accessible by integration".
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Setup Flutter 3.50.0
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.50.0"
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+      - name: Test
+        run: flutter test
+      - name: Build debug APK
+        run: flutter build apk --debug
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-pdf-reader-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+      - name: Release APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0-debug-${{ github.run_number }}
+          name: Open PDF Reader v1.0.0 debug build ${{ github.run_number }}
+          files: build/app/outputs/flutter-apk/app-debug.apk
